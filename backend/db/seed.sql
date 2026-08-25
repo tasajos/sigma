@@ -13,6 +13,16 @@ INSERT INTO roles (nombre, descripcion) VALUES
   ('logistica',      'Administra unidades operativas, personal y recursos.'),
   ('comunicaciones', 'Emite alertas, boletines de prensa y notificaciones por WhatsApp.');
 
+INSERT INTO tipos_unidad (clave, etiqueta, prefijo) VALUES
+  ('ambulancia',      'Ambulancia',       'AMB'),
+  ('autobomba',        'Autobomba',        'AUT'),
+  ('rescate',          'Rescate',          'RES'),
+  ('cisterna',         'Cisterna',         'CIS'),
+  ('vehiculo_ligero',  'Vehículo ligero',  'VLI'),
+  ('embarcacion',      'Embarcación',      'EMB'),
+  ('dron',             'Dron',             'DRN'),
+  ('moto',             'Moto',             'MOT');
+
 INSERT INTO unidades_operativas (codigo, tipo, placa, descripcion, capacidad, base, estado, lat, lng) VALUES
   ('AMB-01', 'ambulancia',      'EMG-1201', 'Ambulancia de soporte vital avanzado', 3, 'Base Central',  'disponible',  -17.3895, -66.1568),
   ('AUT-02', 'autobomba',       'EMG-3302', 'Autobomba 3000 galones',               6, 'Base Central',  'disponible',  -17.3860, -66.1500),

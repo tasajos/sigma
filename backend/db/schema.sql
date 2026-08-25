@@ -60,10 +60,20 @@ CREATE TABLE personal_emergencia (
 -- ------------------------------------------------------------
 -- 3. Registro de unidades operativas
 -- ------------------------------------------------------------
+
+-- Catálogo editable de categorías de unidad. El prefijo (AMB, AUT, ...)
+-- es la base para autoincrementar el código de cada unidad nueva.
+CREATE TABLE tipos_unidad (
+  clave     VARCHAR(30) PRIMARY KEY,
+  etiqueta  VARCHAR(60) NOT NULL,
+  prefijo   VARCHAR(10) NOT NULL UNIQUE,
+  creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
 CREATE TABLE unidades_operativas (
   id             INT AUTO_INCREMENT PRIMARY KEY,
   codigo         VARCHAR(20) NOT NULL UNIQUE,
-  tipo           ENUM('ambulancia','autobomba','rescate','cisterna','vehiculo_ligero','embarcacion','dron','moto') NOT NULL,
+  tipo           VARCHAR(30) NOT NULL,
   placa          VARCHAR(15),
   descripcion    VARCHAR(180),
   capacidad      INT DEFAULT 0,
@@ -74,6 +84,7 @@ CREATE TABLE unidades_operativas (
   lng            DECIMAL(10,7) NULL,
   creado_en      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_unidad_responsable FOREIGN KEY (responsable_id) REFERENCES personal_emergencia(id) ON DELETE SET NULL,
+  CONSTRAINT fk_unidad_tipo FOREIGN KEY (tipo) REFERENCES tipos_unidad(clave),
   INDEX idx_unidades_estado (estado)
 ) ENGINE=InnoDB;
 

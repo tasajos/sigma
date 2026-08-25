@@ -74,14 +74,39 @@ function iconoIncidente(nivel) {
   });
 }
 
-function iconoUnidad(estado) {
+/* No existe un emoji de dron estandarizado en Unicode, así que se dibuja
+   como un pequeño cuadricóptero (4 hélices + marco en X) en lugar de usar
+   un sustituto poco fiel como el helicóptero o el platillo volador. */
+function svgDron(color) {
+  return `<svg width="16" height="16" viewBox="0 0 24 24">
+    <g stroke="${color}" stroke-width="1.8" stroke-linecap="round">
+      <line x1="6" y1="6" x2="18" y2="18"/>
+      <line x1="18" y1="6" x2="6" y2="18"/>
+    </g>
+    <circle cx="6" cy="6" r="2.6" fill="${color}"/>
+    <circle cx="18" cy="6" r="2.6" fill="${color}"/>
+    <circle cx="6" cy="18" r="2.6" fill="${color}"/>
+    <circle cx="18" cy="18" r="2.6" fill="${color}"/>
+    <rect x="9.5" y="9.5" width="5" height="5" rx="1" fill="${color}"/>
+  </svg>`;
+}
+
+const EMOJI_UNIDAD = {
+  ambulancia: '🚑', autobomba: '🚒', rescate: '🧑‍🚒', cisterna: '🚛',
+  vehiculo_ligero: '🚙', embarcacion: '🚤', moto: '🏍️'
+};
+
+function iconoUnidad(estado, tipo) {
   const color = estado === 'disponible' ? '#17825A' : estado === 'fuera_servicio' ? '#5C7284' : '#BF4D10';
+  const contenido = tipo === 'dron'
+    ? svgDron(color)
+    : `<span style="font-size:15px;line-height:1">${EMOJI_UNIDAD[tipo] || '🚗'}</span>`;
   return L.divIcon({
     className: '',
-    html: `<div style="width:24px;height:18px;border-radius:3px;background:${color};
-             border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.5);
-             display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700">U</div>`,
-    iconSize: [24, 18], iconAnchor: [12, 18], popupAnchor: [0, -18]
+    html: `<div style="width:26px;height:26px;border-radius:50%;background:#fff;
+             border:2.5px solid ${color};box-shadow:0 2px 6px rgba(0,0,0,.5);
+             display:flex;align-items:center;justify-content:center">${contenido}</div>`,
+    iconSize: [26, 26], iconAnchor: [13, 26], popupAnchor: [0, -26]
   });
 }
 
@@ -171,7 +196,7 @@ export default function MapaOperativo({
         {/* Personal en campo */}
         {posiciones.filter(p => p.lat && p.lng).map(p => (
           <Marker
-            key={`pos-${p.usuario_id}`}
+            key={`pos-${p.id || p.usuario_id}`}
             position={[Number(p.lat), Number(p.lng)]}
             icon={iconoPersonal(p.estado, p.rol)}
           >
@@ -205,7 +230,7 @@ export default function MapaOperativo({
 
         {/* Unidades con posición conocida */}
         {unidades.filter(u => u.lat && u.lng).map(u => (
-          <Marker key={`uni-${u.id}`} position={[Number(u.lat), Number(u.lng)]} icon={iconoUnidad(u.estado)}>
+          <Marker key={`uni-${u.id}`} position={[Number(u.lat), Number(u.lng)]} icon={iconoUnidad(u.estado, u.tipo)}>
             <Popup>
               <strong>{u.codigo}</strong>
               <div style={{ fontSize: 12, marginTop: 4 }}>

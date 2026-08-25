@@ -1,6 +1,31 @@
 const { pool } = require('../config/db');
 const { registrar } = require('../utils/bitacora');
 
+/** Calcula el siguiente código disponible para un tipo, a partir de su
+ *  prefijo (AMB, AUT, ...) y el mayor número ya usado con ese prefijo.
+ *  El código es único a nivel global, así que evita colisiones entre
+ *  categorías aunque haya datos históricos mal clasificados. */
+async function generarCodigo(tipoClave) {
+  const [[t]] = await pool.query('SELECT prefijo FROM tipos_unidad WHERE clave=?', [tipoClave]);
+  if (!t) throw Object.assign(new Error('Tipo de unidad no encontrado.'), { status: 400 });
+
+  const [filas] = await pool.query(
+    "SELECT codigo FROM unidades_operativas WHERE codigo LIKE CONCAT(?, '-%')", [t.prefijo]
+  );
+  let maximo = 0;
+  for (const f of filas) {
+    const n = parseInt(String(f.codigo).slice(t.prefijo.length + 1), 10);
+    if (!Number.isNaN(n) && n > maximo) maximo = n;
+  }
+  return `${t.prefijo}-${String(maximo + 1).padStart(2, '0')}`;
+}
+
+/** GET /api/unidades/siguiente-codigo?tipo=ambulancia */
+async function siguienteCodigo(req, res) {
+  if (!req.query.tipo) return res.status(400).json({ error: 'Indica el tipo de unidad.' });
+  res.json({ codigo: await generarCodigo(req.query.tipo) });
+}
+
 async function listar(req, res) {
   const { estado, tipo } = req.query;
   let sql = `SELECT un.*, CONCAT(p.nombres,' ',p.apellidos) AS responsable
@@ -16,15 +41,16 @@ async function listar(req, res) {
 
 async function crear(req, res) {
   const b = req.body;
-  if (!b.codigo || !b.tipo) return res.status(400).json({ error: 'Código y tipo de unidad son obligatorios.' });
+  if (!b.tipo) return res.status(400).json({ error: 'El tipo de unidad es obligatorio.' });
+  const codigo = await generarCodigo(b.tipo);
   const [r] = await pool.query(
     `INSERT INTO unidades_operativas (codigo, tipo, placa, descripcion, capacidad, base, responsable_id, estado, lat, lng)
      VALUES (?,?,?,?,?,?,?,?,?,?)`,
-    [b.codigo, b.tipo, b.placa || null, b.descripcion || null, b.capacidad || 0, b.base || null,
+    [codigo, b.tipo, b.placa || null, b.descripcion || null, b.capacidad || 0, b.base || null,
      b.responsable_id || null, b.estado || 'disponible', b.lat || null, b.lng || null]
   );
-  await registrar(req, 'crear', 'unidades_operativas', r.insertId, b.codigo);
-  res.status(201).json({ id: r.insertId, mensaje: 'Unidad registrada.' });
+  await registrar(req, 'crear', 'unidades_operativas', r.insertId, codigo);
+  res.status(201).json({ id: r.insertId, codigo, mensaje: 'Unidad registrada.' });
 }
 
 async function actualizar(req, res) {
@@ -46,4 +72,4 @@ async function eliminar(req, res) {
   res.json({ mensaje: 'Unidad eliminada.' });
 }
 
-module.exports = { listar, crear, actualizar, eliminar };
+module.exports = { listar, crear, actualizar, eliminar, siguienteCodigo };

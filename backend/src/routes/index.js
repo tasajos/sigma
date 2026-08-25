@@ -7,6 +7,7 @@ const auth      = require('../controllers/auth.controller');
 const usuarios  = require('../controllers/usuarios.controller');
 const personal  = require('../controllers/personal.controller');
 const unidades  = require('../controllers/unidades.controller');
+const tiposUnidad = require('../controllers/tiposUnidad.controller');
 const incident  = require('../controllers/incidentes.controller');
 const sci       = require('../controllers/sci.controller');
 const ubic      = require('../controllers/ubicaciones.controller');
@@ -39,10 +40,15 @@ router.put   ('/personal/:id', autenticar, requierePermiso('personal.editar'), a
 router.delete('/personal/:id', autenticar, requierePermiso('personal.editar'), ah(personal.eliminar));
 
 /* ---------------- Unidades operativas ---------------- */
-router.get   ('/unidades',     autenticar, requierePermiso('unidades.ver'),    ah(unidades.listar));
-router.post  ('/unidades',     autenticar, requierePermiso('unidades.editar'), ah(unidades.crear));
-router.put   ('/unidades/:id', autenticar, requierePermiso('unidades.editar'), ah(unidades.actualizar));
-router.delete('/unidades/:id', autenticar, requierePermiso('unidades.editar'), ah(unidades.eliminar));
+router.get   ('/unidades',                 autenticar, requierePermiso('unidades.ver'),    ah(unidades.listar));
+router.get   ('/unidades/siguiente-codigo', autenticar, requierePermiso('unidades.editar'), ah(unidades.siguienteCodigo));
+router.post  ('/unidades',                 autenticar, requierePermiso('unidades.editar'), ah(unidades.crear));
+router.put   ('/unidades/:id',             autenticar, requierePermiso('unidades.editar'), ah(unidades.actualizar));
+router.delete('/unidades/:id',             autenticar, requierePermiso('unidades.editar'), ah(unidades.eliminar));
+
+/* ---------------- Categorías de unidad (catálogo editable) ---------------- */
+router.get ('/tipos-unidad', autenticar, ah(tiposUnidad.listar));
+router.post('/tipos-unidad', autenticar, requierePermiso('unidades.editar'), ah(tiposUnidad.crear));
 
 /* ---------------- Incidentes ---------------- */
 router.get   ('/incidentes',           autenticar, requierePermiso('incidentes.ver'),    ah(incident.listar));

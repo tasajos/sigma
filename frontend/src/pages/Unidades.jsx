@@ -5,33 +5,62 @@ import Modal from '../components/Modal';
 import MapaOperativo from '../components/MapaOperativo';
 import { InsigniaEstado } from '../components/Insignia';
 
-const TIPOS = ['ambulancia', 'autobomba', 'rescate', 'cisterna', 'vehiculo_ligero', 'embarcacion', 'dron', 'moto'];
 const ESTADOS = ['disponible', 'en_ruta', 'en_escena', 'mantenimiento', 'fuera_servicio'];
-const VACIO = { codigo: '', tipo: 'ambulancia', placa: '', descripcion: '', capacidad: 0, base: '', estado: 'disponible', lat: '', lng: '' };
+const VACIO = { codigo: '', tipo: '', placa: '', descripcion: '', capacidad: 0, base: '', estado: 'disponible', lat: '', lng: '' };
 
 export default function Unidades() {
   const { puede } = useAuth();
   const [lista, setLista] = useState([]);
   const [personal, setPersonal] = useState([]);
+  const [tipos, setTipos] = useState([]);
   const [modal, setModal] = useState(false);
   const [f, setF] = useState(VACIO);
   const [editando, setEditando] = useState(null);
   const [error, setError] = useState('');
+  const [nuevaCategoria, setNuevaCategoria] = useState(false);
+  const [catEtiqueta, setCatEtiqueta] = useState('');
+  const [catPrefijo, setCatPrefijo] = useState('');
+  const [errorCategoria, setErrorCategoria] = useState('');
 
   const cargar = () => api.get('/unidades').then(setLista).catch(() => {});
+  const cargarTipos = () => api.get('/tipos-unidad').then(setTipos).catch(() => {});
   useEffect(() => {
     cargar();
+    cargarTipos();
     if (puede('personal.ver')) api.get('/personal?estado=activo').then(setPersonal).catch(() => {});
   }, [puede]);
 
+  // El código se autoincrementa a partir del prefijo de la categoría (AMB-01, AMB-02, ...)
+  // para que nunca se repita dentro de una misma categoría. Solo aplica al registrar una
+  // unidad nueva: al editar se conserva el código ya asignado.
+  useEffect(() => {
+    if (!modal || editando || !f.tipo) return;
+    api.get(`/unidades/siguiente-codigo?tipo=${encodeURIComponent(f.tipo)}`)
+      .then(r => setF(prev => ({ ...prev, codigo: r.codigo })))
+      .catch(() => {});
+  }, [modal, editando, f.tipo]);
+
   const guardar = async () => {
     setError('');
-    if (!f.codigo) return setError('El código de la unidad es obligatorio.');
+    if (!f.tipo) return setError('Selecciona el tipo de unidad.');
     try {
       const carga = { ...f, lat: f.lat === '' ? null : Number(f.lat), lng: f.lng === '' ? null : Number(f.lng) };
       editando ? await api.put(`/unidades/${editando}`, carga) : await api.post('/unidades', carga);
       setModal(false); cargar();
     } catch (e) { setError(e.message); }
+  };
+
+  const crearCategoria = async () => {
+    setErrorCategoria('');
+    if (!catEtiqueta.trim() || !catPrefijo.trim()) {
+      return setErrorCategoria('Indica el nombre y el prefijo de la categoría.');
+    }
+    try {
+      const r = await api.post('/tipos-unidad', { etiqueta: catEtiqueta.trim(), prefijo: catPrefijo.trim() });
+      await cargarTipos();
+      setF(prev => ({ ...prev, tipo: r.clave }));
+      setCatEtiqueta(''); setCatPrefijo(''); setNuevaCategoria(false);
+    } catch (e) { setErrorCategoria(e.message); }
   };
 
   return (
@@ -45,7 +74,8 @@ export default function Unidades() {
             </button>
           )}
           {puede('unidades.editar') && (
-            <button className="btn btn-primario" onClick={() => { setF(VACIO); setEditando(null); setModal(true); }}>
+            <button className="btn btn-primario"
+              onClick={() => { setF({ ...VACIO, tipo: tipos[0]?.clave || '' }); setEditando(null); setNuevaCategoria(false); setModal(true); }}>
               Registrar unidad
             </button>
           )}
@@ -63,7 +93,7 @@ export default function Unidades() {
                     {lista.map(u => (
                       <tr key={u.id}>
                         <td className="dato">{u.codigo}</td>
-                        <td style={{ textTransform: 'capitalize' }}>{u.tipo.replace(/_/g, ' ')}</td>
+                        <td>{tipos.find(t => t.clave === u.tipo)?.etiqueta || u.tipo.replace(/_/g, ' ')}</td>
                         <td className="dato">{u.placa || '—'}</td>
                         <td>{u.base || '—'}</td>
                         <td>{u.responsable || '—'}</td>
@@ -99,13 +129,24 @@ export default function Unidades() {
         {error && <div className="aviso aviso-error">{error}</div>}
         <div className="fila-campos-3">
           <div className="campo campo-mono">
-            <label htmlFor="codigo">Código *</label>
-            <input id="codigo" value={f.codigo} placeholder="AMB-01" onChange={(e) => setF({ ...f, codigo: e.target.value })} />
+            <label htmlFor="codigo">Código</label>
+            <input id="codigo" value={f.codigo} readOnly={!editando}
+              style={!editando ? { background: 'var(--tinta)', color: 'var(--texto-tenue)' } : undefined}
+              placeholder="Se genera al elegir el tipo"
+              onChange={(e) => setF({ ...f, codigo: e.target.value })} />
+            {!editando && <div className="pista" style={{ marginTop: 4 }}>Se autoincrementa según el tipo.</div>}
           </div>
           <div className="campo">
-            <label htmlFor="tipo">Tipo</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <label htmlFor="tipo">Tipo</label>
+              <button type="button" className="btn btn-menudo" style={{ padding: '2px 8px' }}
+                onClick={() => setNuevaCategoria(v => !v)}>
+                {nuevaCategoria ? 'Cancelar' : '+ Nueva categoría'}
+              </button>
+            </div>
             <select id="tipo" value={f.tipo} onChange={(e) => setF({ ...f, tipo: e.target.value })}>
-              {TIPOS.map(t => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}
+              {tipos.length === 0 && <option value="">Sin categorías</option>}
+              {tipos.map(t => <option key={t.clave} value={t.clave}>{t.etiqueta}</option>)}
             </select>
           </div>
           <div className="campo campo-mono">
@@ -113,6 +154,27 @@ export default function Unidades() {
             <input id="placa" value={f.placa || ''} onChange={(e) => setF({ ...f, placa: e.target.value })} />
           </div>
         </div>
+
+        {nuevaCategoria && (
+          <div className="panel" style={{ background: 'var(--tinta)', marginBottom: 16 }}>
+            {errorCategoria && <div className="aviso aviso-error">{errorCategoria}</div>}
+            <div className="fila-campos">
+              <div className="campo">
+                <label htmlFor="catEtiqueta">Nombre de la categoría</label>
+                <input id="catEtiqueta" value={catEtiqueta} placeholder="Bote de rescate"
+                  onChange={(e) => setCatEtiqueta(e.target.value)} />
+              </div>
+              <div className="campo campo-mono">
+                <label htmlFor="catPrefijo">Prefijo de código</label>
+                <input id="catPrefijo" value={catPrefijo} placeholder="BOT" maxLength={10}
+                  onChange={(e) => setCatPrefijo(e.target.value.toUpperCase())} />
+              </div>
+            </div>
+            <button className="btn btn-menudo" style={{ marginTop: 4 }} onClick={crearCategoria}>
+              Agregar categoría
+            </button>
+          </div>
+        )}
         <div className="fila-campos-3">
           <div className="campo">
             <label htmlFor="base">Base</label>
@@ -141,14 +203,27 @@ export default function Unidades() {
           <label htmlFor="desc">Descripción</label>
           <input id="desc" value={f.descripcion || ''} onChange={(e) => setF({ ...f, descripcion: e.target.value })} />
         </div>
-        <div className="fila-campos">
-          <div className="campo campo-mono">
-            <label htmlFor="lat">Latitud de base</label>
-            <input id="lat" value={f.lat} onChange={(e) => setF({ ...f, lat: e.target.value })} />
+        <div className="campo">
+          <label>Ubicación de la base</label>
+          <div className="pista" style={{ marginBottom: 8 }}>Haz clic en el mapa para marcar el punto exacto.</div>
+          <div style={{ height: 260, border: '1px solid var(--linea)', borderRadius: 4, overflow: 'hidden' }}>
+            <MapaOperativo
+              centro={f.lat && f.lng ? [Number(f.lat), Number(f.lng)] : undefined}
+              zoom={f.lat ? 15 : 12}
+              puntoSeleccionado={f.lat && f.lng ? { lat: Number(f.lat), lng: Number(f.lng) } : null}
+              alHacerClic={({ lat, lng }) => setF({ ...f, lat, lng })}
+              mostrarLeyenda={false}
+            />
           </div>
-          <div className="campo campo-mono">
-            <label htmlFor="lng">Longitud de base</label>
-            <input id="lng" value={f.lng} onChange={(e) => setF({ ...f, lng: e.target.value })} />
+          <div className="fila-campos" style={{ marginTop: 10 }}>
+            <div className="campo campo-mono">
+              <label htmlFor="lat">Latitud de base</label>
+              <input id="lat" value={f.lat} onChange={(e) => setF({ ...f, lat: e.target.value })} />
+            </div>
+            <div className="campo campo-mono">
+              <label htmlFor="lng">Longitud de base</label>
+              <input id="lng" value={f.lng} onChange={(e) => setF({ ...f, lng: e.target.value })} />
+            </div>
           </div>
         </div>
       </Modal>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 import MapaOperativo from '../components/MapaOperativo';
 
 const ESTADOS = [
@@ -10,6 +11,7 @@ const ESTADOS = [
 ];
 
 export default function Campo() {
+  const { usuario } = useAuth();
   const [posicion, setPosicion] = useState(null);
   const [estado, setEstado] = useState('disponible');
   const [nota, setNota] = useState('');
@@ -24,12 +26,24 @@ export default function Campo() {
 
   useEffect(() => {
     api.get('/incidentes?estado=activo').then(setIncidentes).catch(() => {});
-    api.get('/ubicaciones/mias').then(setHistorial).catch(() => {});
+    api.get('/ubicaciones/mias').then(datos => fusionarHistorial(datos)).catch(() => {});
     return () => {
       if (vigilante.current) navigator.geolocation.clearWatch(vigilante.current);
       if (cronometro.current) clearInterval(cronometro.current);
     };
   }, []);
+
+  const fusionarHistorial = (nuevos) => {
+    setHistorial(h => {
+      const combinado = [...h];
+      for (const n of Array.isArray(nuevos) ? nuevos : [nuevos]) {
+        if (!combinado.some(x => String(x.id) === String(n.id))) combinado.push(n);
+      }
+      return combinado
+        .sort((a, b) => new Date(b.reportado_en) - new Date(a.reportado_en))
+        .slice(0, 50);
+    });
+  };
 
   const leerPosicion = () =>
     new Promise((resolver, rechazar) => {
@@ -74,7 +88,7 @@ export default function Campo() {
         incidente_id: incidenteId || null, bateria
       });
       setMensaje(r.mensaje);
-      setHistorial(h => [r.ubicacion, ...h].slice(0, 50));
+      fusionarHistorial(r.ubicacion);
       setTimeout(() => setMensaje(null), 4000);
     } catch (e) { setError(e.message); }
   };
@@ -187,9 +201,20 @@ export default function Campo() {
         <div className="panel" style={{ padding: 0, overflow: 'hidden', minHeight: 460 }}>
           <div style={{ height: '100%', minHeight: 460 }}>
             <MapaOperativo
-              centro={posicion ? [posicion.lat, posicion.lng] : undefined}
+              centro={
+                posicion ? [posicion.lat, posicion.lng]
+                  : historial[0] ? [Number(historial[0].lat), Number(historial[0].lng)]
+                  : undefined
+              }
               zoom={posicion ? 16 : 12}
               incidentes={incidentes}
+              posiciones={historial.map(h => ({
+                ...h,
+                usuario_id: usuario?.id,
+                nombres: usuario?.nombres,
+                apellidos: usuario?.apellidos,
+                rol: usuario?.rol
+              }))}
               puntoSeleccionado={posicion}
               mostrarLeyenda={false}
             />
