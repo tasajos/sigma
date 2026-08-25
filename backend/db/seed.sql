@@ -14,11 +14,11 @@ INSERT INTO roles (nombre, descripcion) VALUES
   ('comunicaciones', 'Emite alertas, boletines de prensa y notificaciones por WhatsApp.');
 
 INSERT INTO unidades_operativas (codigo, tipo, placa, descripcion, capacidad, base, estado, lat, lng) VALUES
-  ('AMB-01', 'ambulancia',      'EMG-1201', 'Ambulancia de soporte vital avanzado', 3, 'Base Central',  'disponible',  -12.0464, -77.0428),
-  ('AUT-02', 'autobomba',       'EMG-3302', 'Autobomba 3000 galones',               6, 'Base Central',  'disponible',  -12.0510, -77.0350),
-  ('RES-03', 'rescate',         'EMG-4410', 'Unidad de rescate vehicular y alturas', 5, 'Base Norte',    'disponible',  -12.0300, -77.0500),
-  ('DRN-04', 'dron',            NULL,       'Dron de reconocimiento con térmica',    0, 'Base Central',  'disponible',  -12.0464, -77.0428),
-  ('VLI-05', 'vehiculo_ligero', 'EMG-5521', 'Vehículo de comando móvil',             4, 'Base Sur',      'disponible',  -12.0700, -77.0300);
+  ('AMB-01', 'ambulancia',      'EMG-1201', 'Ambulancia de soporte vital avanzado', 3, 'Base Central',  'disponible',  -17.3895, -66.1568),
+  ('AUT-02', 'autobomba',       'EMG-3302', 'Autobomba 3000 galones',               6, 'Base Central',  'disponible',  -17.3860, -66.1500),
+  ('RES-03', 'rescate',         'EMG-4410', 'Unidad de rescate vehicular y alturas', 5, 'Base Norte',    'disponible',  -17.3650, -66.1600),
+  ('DRN-04', 'dron',            NULL,       'Dron de reconocimiento con térmica',    0, 'Base Central',  'disponible',  -17.3895, -66.1568),
+  ('VLI-05', 'vehiculo_ligero', 'EMG-5521', 'Vehículo de comando móvil',             4, 'Base Sur',      'disponible',  -17.4200, -66.1450);
 
 INSERT INTO personal_emergencia
   (codigo, nombres, apellidos, documento, tipo_sangre, telefono, contacto_emergencia, telefono_emergencia, institucion, especialidad, nivel_certificacion, estado) VALUES

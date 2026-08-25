@@ -99,7 +99,10 @@ export default function Layout() {
 
         <aside className={`lateral ${abierto ? 'abierto' : ''}`}>
           <div className="marca">
-            <div className="marca-nombre">SIGMA<span>·SCI</span></div>
+            <div className="marca-fila">
+              <img src="/chakuy-icon.png" alt="" className="marca-logo" />
+              <div className="marca-nombre">SIGMA<span>·SCI</span></div>
+            </div>
             <div className="marca-sub">Monitoreo de eventos adversos</div>
           </div>
 

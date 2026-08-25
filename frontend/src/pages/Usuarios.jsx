@@ -12,8 +12,9 @@ export default function Usuarios() {
   const [f, setF] = useState(VACIO);
   const [editando, setEditando] = useState(null);
   const [error, setError] = useState('');
+  const [errorCarga, setErrorCarga] = useState('');
 
-  const cargar = () => api.get('/usuarios').then(setLista).catch(() => {});
+  const cargar = () => api.get('/usuarios').then(setLista).catch((e) => setErrorCarga(e.message));
   useEffect(() => { cargar(); api.get('/roles').then(setRoles).catch(() => {}); }, []);
 
   const guardar = async () => {
@@ -41,6 +42,8 @@ export default function Usuarios() {
 
   return (
     <div className="vista">
+      {errorCarga && <div className="aviso aviso-error">No se pudo cargar la lista de usuarios: {errorCarga}</div>}
+
       {pendientes.length > 0 && (
         <div className="aviso aviso-info">
           Hay {pendientes.length} solicitud(es) de registro esperando aprobación.

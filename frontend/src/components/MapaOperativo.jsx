@@ -32,15 +32,15 @@ const ETIQUETAS_SATELITE =
   'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}';
 
 const COLOR_ESTADO = {
-  disponible:    '#1F9D63',
-  en_movimiento: '#0FA3B1',
-  en_escena:     '#E0A50B',
-  emergencia:    '#C42B2B',
-  fuera_servicio:'#5A7186'
+  disponible:    '#17825A',
+  en_movimiento: '#0E7C8C',
+  en_escena:     '#A66A05',
+  emergencia:    '#B32424',
+  fuera_servicio:'#5C7284'
 };
 
 const COLOR_NIVEL = {
-  verde: '#1F9D63', amarillo: '#E0A50B', naranja: '#E2601C', rojo: '#C42B2B'
+  verde: '#17825A', amarillo: '#A66A05', naranja: '#BF4D10', rojo: '#B32424'
 };
 
 const INICIAL = {
@@ -48,7 +48,7 @@ const INICIAL = {
 };
 
 function iconoPersonal(estado, rol) {
-  const color = COLOR_ESTADO[estado] || '#0FA3B1';
+  const color = COLOR_ESTADO[estado] || '#0E7C8C';
   const pulso = estado === 'emergencia' ? ' marcador-pulso' : '';
   return L.divIcon({
     className: '',
@@ -62,7 +62,7 @@ function iconoPersonal(estado, rol) {
 }
 
 function iconoIncidente(nivel) {
-  const color = COLOR_NIVEL[nivel] || '#1F9D63';
+  const color = COLOR_NIVEL[nivel] || '#17825A';
   return L.divIcon({
     className: '',
     html: `<div style="width:32px;height:32px;border-radius:3px;transform:rotate(45deg);
@@ -75,7 +75,7 @@ function iconoIncidente(nivel) {
 }
 
 function iconoUnidad(estado) {
-  const color = estado === 'disponible' ? '#1F9D63' : estado === 'fuera_servicio' ? '#5A7186' : '#E2601C';
+  const color = estado === 'disponible' ? '#17825A' : estado === 'fuera_servicio' ? '#5C7284' : '#BF4D10';
   return L.divIcon({
     className: '',
     html: `<div style="width:24px;height:18px;border-radius:3px;background:${color};
@@ -105,8 +105,8 @@ export default function MapaOperativo({
 }) {
   const [capa, setCapa] = useState('roadmap');
   const centroFinal = useMemo(() => centro || [
-    Number(import.meta.env.VITE_MAPA_LAT || -12.0464),
-    Number(import.meta.env.VITE_MAPA_LNG || -77.0428)
+    Number(import.meta.env.VITE_MAPA_LAT || -17.3895),
+    Number(import.meta.env.VITE_MAPA_LNG || -66.1568)
   ], [centro]);
 
   return (
@@ -185,7 +185,7 @@ export default function MapaOperativo({
               <div className="coord" style={{ marginTop: 6 }}>
                 {Number(p.lat).toFixed(6)}, {Number(p.lng).toFixed(6)}
               </div>
-              <div style={{ fontSize: 11, color: '#8098AB', marginTop: 3 }}>
+              <div style={{ fontSize: 11, color: '#44586A', marginTop: 3 }}>
                 Último reporte: {new Date(p.reportado_en).toLocaleString('es-PE')}
               </div>
               {alCompartirWhatsapp && (
@@ -233,10 +233,10 @@ export default function MapaOperativo({
         <div className="leyenda-mapa">
           <div className="rotulo">Leyenda</div>
           {[
-            ['#1F9D63', 'Disponible'],
-            ['#E0A50B', 'En escena'],
-            ['#0FA3B1', 'En movimiento'],
-            ['#C42B2B', 'Emergencia']
+            ['#17825A', 'Disponible'],
+            ['#A66A05', 'En escena'],
+            ['#0E7C8C', 'En movimiento'],
+            ['#B32424', 'Emergencia']
           ].map(([color, texto]) => (
             <div className="leyenda-fila" key={texto}>
               <span className="leyenda-punto" style={{ background: color }} />{texto}

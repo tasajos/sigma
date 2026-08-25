@@ -5,7 +5,7 @@ import { obtenerSocket } from '../api/socket';
 import Modal from '../components/Modal';
 import { InsigniaNivel } from '../components/Insignia';
 
-const COLOR = { verde: '#1F9D63', amarillo: '#E0A50B', naranja: '#E2601C', rojo: '#C42B2B' };
+const COLOR = { verde: '#17825A', amarillo: '#A66A05', naranja: '#BF4D10', rojo: '#B32424' };
 
 const GUIA = {
   verde:    'Vigilancia. Sin despliegue de recursos.',

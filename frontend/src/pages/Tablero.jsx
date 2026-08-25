@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { InsigniaNivel, InsigniaEstado } from '../components/Insignia';
 import MapaOperativo from '../components/MapaOperativo';
 
-const COLOR = { verde: '#1F9D63', amarillo: '#E0A50B', naranja: '#E2601C', rojo: '#C42B2B' };
+const COLOR = { verde: '#17825A', amarillo: '#A66A05', naranja: '#BF4D10', rojo: '#B32424' };
 
 export default function Tablero() {
   const { puede } = useAuth();
@@ -15,12 +15,18 @@ export default function Tablero() {
   const [incidentes, setIncidentes] = useState([]);
   const [posiciones, setPosiciones] = useState([]);
   const [alertas, setAlertas] = useState([]);
+  const [error, setError] = useState('');
 
   const cargar = async () => {
-    const tareas = [api.get('/alertas/resumen'), api.get('/incidentes?estado=activo'), api.get('/alertas')];
+    try {
+      const r = await api.get('/alertas/resumen');
+      setResumen(r);
+      setError('');
+    } catch (e) { setError(e.message); return; }
+
+    const tareas = [api.get('/incidentes?estado=activo'), api.get('/alertas')];
     if (puede('ubicacion.monitorear')) tareas.push(api.get('/ubicaciones/actuales'));
-    const [r, i, a, u] = await Promise.all(tareas.map(p => p.catch(() => null)));
-    if (r) setResumen(r);
+    const [i, a, u] = await Promise.all(tareas.map(p => p.catch(() => null)));
     if (i) setIncidentes(i);
     if (a) setAlertas(a.slice(0, 8));
     if (u) setPosiciones(u);
@@ -38,6 +44,7 @@ export default function Tablero() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  if (error) return <div className="vista"><div className="aviso aviso-error">No se pudo cargar el tablero: {error}</div></div>;
   if (!resumen) return <div className="vista"><div className="panel vacio">Cargando el estado de la operación…</div></div>;
 
   const datosGrafico = (resumen.porTipo || []).map(t => ({
@@ -110,11 +117,11 @@ export default function Tablero() {
             ? <div className="vacio">Aún no hay datos históricos.</div>
             : <ResponsiveContainer width="100%" height={260}>
                 <BarChart data={datosGrafico} layout="vertical" margin={{ left: 10, right: 16 }}>
-                  <CartesianGrid stroke="#2A3B49" horizontal={false} />
-                  <XAxis type="number" stroke="#5A7186" fontSize={11} allowDecimals={false} />
-                  <YAxis type="category" dataKey="tipo" stroke="#5A7186" fontSize={11} width={110} />
-                  <Tooltip contentStyle={{ background: '#16232E', border: '1px solid #2A3B49', borderRadius: 4, color: '#DCE6ED' }} />
-                  <Bar dataKey="total" fill="#0FA3B1" radius={[0, 3, 3, 0]} barSize={16} />
+                  <CartesianGrid stroke="#D5DEE5" horizontal={false} />
+                  <XAxis type="number" stroke="#5C7284" fontSize={11} allowDecimals={false} />
+                  <YAxis type="category" dataKey="tipo" stroke="#5C7284" fontSize={11} width={110} />
+                  <Tooltip contentStyle={{ background: '#FFFFFF', border: '1px solid #D5DEE5', borderRadius: 4, color: '#17232E' }} />
+                  <Bar dataKey="total" fill="#0E7C8C" radius={[0, 3, 3, 0]} barSize={16} />
                 </BarChart>
               </ResponsiveContainer>}
         </div>

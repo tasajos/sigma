@@ -82,7 +82,7 @@ export default function Login() {
             <span className="dato">admin@sigma.gob · rescatista@sigma.gob</span>
             <span className="dato">operaciones@sigma.gob · logistica@sigma.gob</span>
             <span className="dato">comunicaciones@sigma.gob</span>
-            <span className="dato" style={{ marginTop: 6, color: 'var(--acento-alto)' }}>Contraseña: Sigma2026*</span>
+            <span className="dato" style={{ marginTop: 6, color: 'var(--acento)' }}>Contraseña: Sigma2026*</span>
           </div>
         </form>
       </section>
