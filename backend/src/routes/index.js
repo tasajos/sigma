@@ -1,4 +1,5 @@
 const router = require('express').Router();
+const rateLimit = require('express-rate-limit');
 const ah = require('../utils/asyncHandler');
 const { autenticar, requierePermiso, permitirRoles } = require('../middleware/auth');
 const { ROLES } = require('../config/roles');
@@ -11,10 +12,18 @@ const tiposUnidad = require('../controllers/tiposUnidad.controller');
 const incident  = require('../controllers/incidentes.controller');
 const sci       = require('../controllers/sci.controller');
 const ubic      = require('../controllers/ubicaciones.controller');
+const enlaces   = require('../controllers/enlaces.controller');
 const alertas   = require('../controllers/alertas.controller');
 const prensa    = require('../controllers/prensa.controller');
 const whatsapp  = require('../controllers/whatsapp.controller');
 const reportes  = require('../controllers/reportes.controller');
+
+// Los enlaces públicos no requieren sesión: se limita el ritmo de peticiones
+// por IP para que el mismo dispositivo pueda transmitir en vivo sin trabas
+// pero se frene un intento de abuso sobre el enlace.
+const limitarEnlacePublico = rateLimit({
+  windowMs: 5 * 60 * 1000, max: 120, standardHeaders: true, legacyHeaders: false
+});
 
 /* ---------------- Autenticación (público) ---------------- */
 router.post('/auth/login',    ah(auth.login));
@@ -74,8 +83,22 @@ router.delete('/sci/:incidenteId/objetivos/:objetivoId', autenticar, requierePer
 /* ---------------- Ubicaciones en campo ---------------- */
 router.post('/ubicaciones',                    autenticar, requierePermiso('ubicacion.enviar'),     ah(ubic.reportar));
 router.get ('/ubicaciones/actuales',           autenticar, requierePermiso('ubicacion.monitorear'), ah(ubic.actuales));
+router.get ('/ubicaciones/conectados',         autenticar, requierePermiso('ubicacion.monitorear'), ah(ubic.conectados));
 router.get ('/ubicaciones/mias',               autenticar, ah(ubic.mias));
 router.get ('/ubicaciones/historial/:usuarioId', autenticar, requierePermiso('ubicacion.monitorear'), ah(ubic.historial));
+
+/* ---------------- Enlaces de ubicación compartida ---------------- */
+/* Creación y listado: solo el centro de monitoreo. Las rutas /publico/*  */
+/* no llevan `autenticar`: las abre cualquier dispositivo desde el enlace. */
+router.post('/enlaces',              autenticar, requierePermiso('ubicacion.monitorear'), ah(enlaces.crear));
+router.get ('/enlaces',              autenticar, requierePermiso('ubicacion.monitorear'), ah(enlaces.listar));
+router.post('/enlaces/:id/cancelar', autenticar, requierePermiso('ubicacion.monitorear'), ah(enlaces.cancelar));
+
+router.get ('/enlaces/publico/:token',           limitarEnlacePublico, ah(enlaces.obtenerPublico));
+router.post('/enlaces/publico/:token/autorizar', limitarEnlacePublico, ah(enlaces.autorizar));
+router.post('/enlaces/publico/:token/rechazar',  limitarEnlacePublico, ah(enlaces.rechazar));
+router.post('/enlaces/publico/:token/ubicacion', limitarEnlacePublico, ah(enlaces.reportarUbicacion));
+router.post('/enlaces/publico/:token/finalizar', limitarEnlacePublico, ah(enlaces.finalizar));
 
 /* ---------------- Alertas ---------------- */
 router.get  ('/alertas',            autenticar, ah(alertas.listar));

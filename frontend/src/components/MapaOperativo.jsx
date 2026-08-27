@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMapEvents, LayersControl } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline, useMapEvents, LayersControl } from 'react-leaflet';
 import L from 'leaflet';
 
 /* ============================================================
@@ -110,6 +110,21 @@ function iconoUnidad(estado, tipo) {
   });
 }
 
+const COLOR_ENLACE = '#5B3DF5';
+
+/** Dispositivo ajeno al sistema que transmite por un enlace compartido */
+function iconoEnlace() {
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:26px;height:26px;border-radius:50%;background:${COLOR_ENLACE};
+             border:2.5px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.5);
+             display:flex;align-items:center;justify-content:center">
+             <span style="font-size:13px;line-height:1">🔗</span>
+           </div>`,
+    iconSize: [26, 26], iconAnchor: [13, 26], popupAnchor: [0, -26]
+  });
+}
+
 /** Captura clics para colocar un punto nuevo */
 function CapturarClic({ alHacerClic }) {
   useMapEvents({ click(e) { alHacerClic?.({ lat: e.latlng.lat, lng: e.latlng.lng }); } });
@@ -122,6 +137,7 @@ export default function MapaOperativo({
   posiciones = [],
   incidentes = [],
   unidades = [],
+  enlaces = [],
   puntoSeleccionado = null,
   alHacerClic = null,
   alCompartirWhatsapp = null,
@@ -153,8 +169,10 @@ export default function MapaOperativo({
           url={CAPAS[capa].url}
           attribution={CAPAS[capa].atribucion}
           maxZoom={CAPAS[capa].maxZoom}
+          crossOrigin="anonymous"
+          referrerPolicy="no-referrer"
         />
-        {capa === 'satelite' && <TileLayer url={ETIQUETAS_SATELITE} />}
+        {capa === 'satelite' && <TileLayer url={ETIQUETAS_SATELITE} referrerPolicy="no-referrer" />}
 
         {alHacerClic && <CapturarClic alHacerClic={alHacerClic} />}
 
@@ -239,6 +257,29 @@ export default function MapaOperativo({
               </div>
             </Popup>
           </Marker>
+        ))}
+
+        {/* Dispositivos externos que transmiten por un enlace compartido */}
+        {enlaces.filter(e => e.lat && e.lng).map(e => (
+          <div key={`enl-${e.token}`}>
+            {e.trail && e.trail.length > 1 && (
+              <Polyline positions={e.trail} pathOptions={{ color: COLOR_ENLACE, weight: 3, opacity: .7 }} />
+            )}
+            <Marker position={[Number(e.lat), Number(e.lng)]} icon={iconoEnlace()}>
+              <Popup>
+                <strong style={{ fontSize: 14 }}>{e.etiqueta}</strong>
+                <div style={{ fontSize: 12, marginTop: 3, color: COLOR_ENLACE }}>Enlace de ubicación compartida</div>
+                <div className="coord" style={{ marginTop: 6 }}>
+                  {Number(e.lat).toFixed(6)}, {Number(e.lng).toFixed(6)}
+                </div>
+                {e.reportado_en && (
+                  <div style={{ fontSize: 11, color: '#44586A', marginTop: 3 }}>
+                    Último reporte: {new Date(e.reportado_en).toLocaleString('es-PE')}
+                  </div>
+                )}
+              </Popup>
+            </Marker>
+          </div>
         ))}
 
         {/* Punto que el operador acaba de marcar */}

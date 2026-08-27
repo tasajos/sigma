@@ -168,7 +168,7 @@ h3 { font-size: 17px; }
 .punto.viva { background: var(--verde); box-shadow: 0 0 0 3px rgba(23,130,90,.2); }
 
 .vista { padding: 22px 24px 48px; }
-.vista-plena { padding: 0; height: calc(100% - 55px); }
+.vista-plena { padding: 0; height: calc(100% - 55px); position: relative; }
 
 /* ============================================================
    Superficies y controles
@@ -352,6 +352,47 @@ td.acciones { white-space: nowrap; text-align: right; }
 }
 .leyenda-fila { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-top: 6px; }
 .leyenda-punto { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; border: 1.5px solid rgba(255,255,255,.7); }
+
+.panel-dispositivos {
+  position: absolute; top: 12px; left: 12px; z-index: 500;
+  background: rgba(255,255,255,.96); border: 1px solid var(--linea);
+  border-radius: var(--radio); padding: 12px 13px; box-shadow: var(--sombra);
+  width: 248px; max-height: 320px; overflow-y: auto;
+}
+.panel-dispositivos .rotulo { display: flex; align-items: center; gap: 6px; }
+.panel-dispositivos .rotulo svg { color: var(--acento); flex-shrink: 0; }
+
+.fila-dispositivo, .fila-enlace {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  font-size: 12.5px; margin-top: 7px; padding: 6px 8px;
+  background: var(--tinta); border-radius: 7px;
+}
+.fila-dispositivo .nombre, .fila-enlace .nombre {
+  display: flex; align-items: center; gap: 6px; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.fila-dispositivo .nombre svg { color: var(--texto-tenue); flex-shrink: 0; }
+
+.btn-solicitar {
+  display: flex; align-items: center; gap: 5px; flex-shrink: 0;
+  border: none; border-radius: 6px; background: var(--acento); color: #fff;
+  padding: 5px 9px; font-size: 11px; font-weight: 600; cursor: pointer;
+  transition: background .15s;
+}
+.btn-solicitar:hover { background: #0A6472; }
+.btn-solicitar:disabled { background: #9AA7B0; cursor: default; }
+
+.btn-icono {
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  border: none; background: none; color: var(--rojo); padding: 5px;
+  border-radius: 6px; cursor: pointer; transition: background .15s;
+}
+.btn-icono:hover { background: rgba(179,36,36,.12); }
+
+.estado-punto { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.estado-punto.activo    { background: var(--verde); box-shadow: 0 0 0 3px rgba(23,130,90,.2); }
+.estado-punto.pendiente { background: #A66A05; box-shadow: 0 0 0 3px rgba(166,106,5,.18); }
+.estado-punto.rechazado { background: var(--texto-tenue); }
 
 /* Marcadores personalizados */
 .marcador-campo {

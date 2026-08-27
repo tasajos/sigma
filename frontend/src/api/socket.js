@@ -4,7 +4,10 @@ let socket = null;
 
 export function conectarSocket(token) {
   if (socket) socket.disconnect();
-  socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:4000', {
+  // Sin VITE_SOCKET_URL, se conecta al mismo origen que sirvió la app
+  // (en desarrollo eso pasa por el proxy de Vite hacia el backend, así
+  // que funciona igual entrando por localhost o por la IP de red).
+  socket = io(import.meta.env.VITE_SOCKET_URL || window.location.origin, {
     auth: { token },
     transports: ['websocket', 'polling']
   });

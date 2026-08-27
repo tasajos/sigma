@@ -181,6 +181,42 @@ CREATE TABLE ubicaciones (
 ) ENGINE=InnoDB;
 
 -- ------------------------------------------------------------
+-- 6.1 Enlaces públicos de ubicación compartida
+--     (para solicitar la posición de cualquier dispositivo,
+--     registrado o no, vía un enlace enviado por WhatsApp)
+-- ------------------------------------------------------------
+CREATE TABLE enlaces_ubicacion (
+  id               INT AUTO_INCREMENT PRIMARY KEY,
+  token            VARCHAR(48) NOT NULL UNIQUE,
+  etiqueta         VARCHAR(120) NOT NULL,
+  telefono         VARCHAR(25) NULL,
+  incidente_id     INT NULL,
+  creado_por       INT NOT NULL,
+  estado           ENUM('pendiente','activo','rechazado','finalizado') NOT NULL DEFAULT 'pendiente',
+  lat              DECIMAL(10,7) NULL,
+  lng              DECIMAL(10,7) NULL,
+  precision_m      DECIMAL(8,2) NULL,
+  ultima_actividad TIMESTAMP NULL,
+  expira_en        DATETIME NOT NULL,
+  creado_en        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_enlace_incidente FOREIGN KEY (incidente_id) REFERENCES incidentes(id) ON DELETE SET NULL,
+  CONSTRAINT fk_enlace_usuario   FOREIGN KEY (creado_por)   REFERENCES usuarios(id) ON DELETE CASCADE,
+  INDEX idx_enlace_estado (estado, expira_en)
+) ENGINE=InnoDB;
+
+-- Recorrido de cada enlace mientras transmite (para trazar su ruta en el mapa)
+CREATE TABLE enlace_posiciones (
+  id           BIGINT AUTO_INCREMENT PRIMARY KEY,
+  enlace_id    INT NOT NULL,
+  lat          DECIMAL(10,7) NOT NULL,
+  lng          DECIMAL(10,7) NOT NULL,
+  precision_m  DECIMAL(8,2) NULL,
+  reportado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_enlacepos_enlace FOREIGN KEY (enlace_id) REFERENCES enlaces_ubicacion(id) ON DELETE CASCADE,
+  INDEX idx_enlacepos_enlace_fecha (enlace_id, reportado_en)
+) ENGINE=InnoDB;
+
+-- ------------------------------------------------------------
 -- 7. Alertas y notificaciones
 -- ------------------------------------------------------------
 CREATE TABLE alertas (

@@ -1,5 +1,5 @@
 const { pool } = require('../config/db');
-const { emitir } = require('../sockets');
+const { emitir, listarConectados } = require('../sockets');
 
 /** POST /api/ubicaciones — el actor en campo reporta su posición */
 async function reportar(req, res) {
@@ -53,4 +53,9 @@ async function mias(req, res) {
   res.json(filas);
 }
 
-module.exports = { reportar, actuales, historial, mias };
+/** GET /api/ubicaciones/conectados — dispositivos con sesión abierta ahora mismo */
+async function conectados(req, res) {
+  res.json(listarConectados());
+}
+
+module.exports = { reportar, actuales, historial, mias, conectados };

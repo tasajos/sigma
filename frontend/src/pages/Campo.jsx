@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { obtenerSocket } from '../api/socket';
 import MapaOperativo from '../components/MapaOperativo';
 
 const ESTADOS = [
@@ -9,6 +10,18 @@ const ESTADOS = [
   { v: 'en_escena',     t: 'En escena' },
   { v: 'emergencia',    t: 'Emergencia' }
 ];
+
+// Umbrales para no saturar al servidor: se transmite apenas se detecta
+// movimiento real, o como máximo cada MIN_INTERVALO_MS si el actor sigue quieto.
+const MIN_INTERVALO_MS = 8000;
+const DISTANCIA_MIN_M = 15;
+
+function distanciaMetros(lat1, lng1, lat2, lng2) {
+  const R = 6371000, rad = Math.PI / 180;
+  const dLat = (lat2 - lat1) * rad, dLng = (lng2 - lng1) * rad;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.asin(Math.sqrt(a));
+}
 
 export default function Campo() {
   const { usuario } = useAuth();
@@ -21,16 +34,33 @@ export default function Campo() {
   const [mensaje, setMensaje] = useState(null);
   const [error, setError] = useState('');
   const [automatico, setAutomatico] = useState(false);
-  const vigilante = useRef(null);
-  const cronometro = useRef(null);
+  const [solicitud, setSolicitud] = useState(null);
+  const observador = useRef(null);
+  const ultimoEnvio = useRef({ ts: 0, lat: null, lng: null });
+
+  // El watchPosition se registra una sola vez; estas refs le permiten leer
+  // siempre el estado/nota/incidente vigentes sin tener que reiniciarlo.
+  const estadoRef = useRef(estado);
+  const notaRef = useRef(nota);
+  const incidenteIdRef = useRef(incidenteId);
+  useEffect(() => { estadoRef.current = estado; }, [estado]);
+  useEffect(() => { notaRef.current = nota; }, [nota]);
+  useEffect(() => { incidenteIdRef.current = incidenteId; }, [incidenteId]);
 
   useEffect(() => {
     api.get('/incidentes?estado=activo').then(setIncidentes).catch(() => {});
     api.get('/ubicaciones/mias').then(datos => fusionarHistorial(datos)).catch(() => {});
     return () => {
-      if (vigilante.current) navigator.geolocation.clearWatch(vigilante.current);
-      if (cronometro.current) clearInterval(cronometro.current);
+      if (observador.current != null) navigator.geolocation.clearWatch(observador.current);
     };
+  }, []);
+
+  useEffect(() => {
+    const s = obtenerSocket();
+    if (!s) return;
+    const alSolicitar = (data) => setSolicitud(data);
+    s.on('ubicacion:solicitud', alSolicitar);
+    return () => s.off('ubicacion:solicitud', alSolicitar);
   }, []);
 
   const fusionarHistorial = (nuevos) => {
@@ -74,18 +104,16 @@ export default function Campo() {
     } catch (e) { setError(e.message); }
   };
 
-  const transmitir = async (auto = false) => {
-    setError(''); setMensaje(null);
+  const enviarPosicion = async (p) => {
+    setError('');
     try {
-      const p = posicion && auto === false ? posicion : await leerPosicion();
-      setPosicion(p);
       const bateria = navigator.getBattery
         ? Math.round((await navigator.getBattery()).level * 100)
         : null;
 
       const r = await api.post('/ubicaciones', {
-        ...p, estado, nota: nota || null,
-        incidente_id: incidenteId || null, bateria
+        ...p, estado: estadoRef.current, nota: notaRef.current || null,
+        incidente_id: incidenteIdRef.current || null, bateria
       });
       setMensaje(r.mensaje);
       fusionarHistorial(r.ubicacion);
@@ -93,16 +121,64 @@ export default function Campo() {
     } catch (e) { setError(e.message); }
   };
 
+  const transmitir = async () => {
+    setMensaje(null);
+    try {
+      const p = posicion || await leerPosicion();
+      setPosicion(p);
+      await enviarPosicion(p);
+    } catch (e) { setError(e.message); }
+  };
+
+  /** Se dispara con cada actualización del GPS mientras el envío en vivo está activo */
+  const manejarPosicionEnVivo = (p) => {
+    const punto = {
+      lat: p.coords.latitude, lng: p.coords.longitude,
+      precision_m: p.coords.accuracy, altitud_m: p.coords.altitude
+    };
+    setPosicion(punto);
+
+    const ahora = Date.now();
+    const { ts, lat, lng } = ultimoEnvio.current;
+    const movioSuficiente = lat == null || distanciaMetros(lat, lng, punto.lat, punto.lng) >= DISTANCIA_MIN_M;
+    if (!movioSuficiente && ahora - ts < MIN_INTERVALO_MS) return;
+
+    ultimoEnvio.current = { ts: ahora, lat: punto.lat, lng: punto.lng };
+    enviarPosicion(punto);
+  };
+
   const alternarAutomatico = () => {
     if (automatico) {
-      clearInterval(cronometro.current);
-      cronometro.current = null;
+      if (observador.current != null) navigator.geolocation.clearWatch(observador.current);
+      observador.current = null;
       setAutomatico(false);
       return;
     }
-    transmitir(true);
-    cronometro.current = setInterval(() => transmitir(true), 60000);
+    if (!navigator.geolocation) {
+      setError('Este dispositivo no permite obtener la ubicación.');
+      return;
+    }
+    setError('');
+    ultimoEnvio.current = { ts: 0, lat: null, lng: null };
+    observador.current = navigator.geolocation.watchPosition(
+      manejarPosicionEnVivo,
+      (e) => setError(
+        e.code === 1
+          ? 'Permiso de ubicación denegado. Habilítalo en los ajustes del navegador.'
+          : 'No se pudo obtener la ubicación. Verifica el GPS y vuelve a intentarlo.'
+      ),
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
+    );
     setAutomatico(true);
+  };
+
+  const responderSolicitud = (aceptada) => {
+    const s = obtenerSocket();
+    if (s && solicitud) {
+      s.emit('ubicacion:solicitud:respuesta', { solicitanteId: solicitud.solicitanteId, aceptada });
+    }
+    if (aceptada && !automatico) alternarAutomatico();
+    setSolicitud(null);
   };
 
   return (
@@ -111,6 +187,16 @@ export default function Campo() {
         <div>
           <div className="panel" style={{ marginBottom: 14 }}>
             <div className="panel-cabecera"><h3>Transmitir posición</h3></div>
+
+            {solicitud && (
+              <div className="aviso aviso-info" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                <span><b>{solicitud.solicitanteNombre}</b> solicitó tu ubicación en tiempo real desde el centro de monitoreo.</span>
+                <span style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                  <button className="btn btn-primario btn-menudo" onClick={() => responderSolicitud(true)}>Aceptar</button>
+                  <button className="btn btn-menudo" onClick={() => responderSolicitud(false)}>Rechazar</button>
+                </span>
+              </div>
+            )}
 
             {error && <div className="aviso aviso-error">{error}</div>}
             {mensaje && <div className="aviso aviso-ok">{mensaje}</div>}
@@ -157,7 +243,7 @@ export default function Campo() {
                 placeholder="Acceso bloqueado por escombros" />
             </div>
 
-            <button className="btn btn-primario btn-bloque" onClick={() => transmitir(false)}>
+            <button className="btn btn-primario btn-bloque" onClick={transmitir}>
               Enviar posición ahora
             </button>
 
@@ -166,8 +252,13 @@ export default function Campo() {
               style={{ marginTop: 10 }}
               onClick={alternarAutomatico}
             >
-              {automatico ? 'Detener envío automático' : 'Enviar cada minuto'}
+              {automatico ? 'Detener transmisión en tiempo real' : 'Transmitir en tiempo real'}
             </button>
+            {automatico && (
+              <div style={{ fontSize: 12, color: 'var(--texto-tenue)', marginTop: 8 }}>
+                Tu posición se actualiza en el mapa apenas te mueves.
+              </div>
+            )}
 
             {estado === 'emergencia' && (
               <div className="aviso aviso-error" style={{ marginTop: 14, marginBottom: 0 }}>

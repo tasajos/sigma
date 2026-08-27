@@ -5,6 +5,7 @@ import Layout from './components/Layout';
 
 import Login from './pages/Login';
 import Registro from './pages/Registro';
+import EnlaceUbicacion from './pages/EnlaceUbicacion';
 import Tablero from './pages/Tablero';
 import Mapa from './pages/Mapa';
 import Campo from './pages/Campo';
@@ -33,6 +34,7 @@ export default function App() {
         <Routes>
           <Route path="/acceso"   element={<SoloInvitados><Login /></SoloInvitados>} />
           <Route path="/registro" element={<SoloInvitados><Registro /></SoloInvitados>} />
+          <Route path="/u/:token" element={<EnlaceUbicacion />} />
 
           <Route element={<RutaProtegida><Layout /></RutaProtegida>}>
             <Route index element={<Tablero />} />
