@@ -15,9 +15,9 @@ export const CAPAS = {
   },
   roadmap: {
     nombre: 'Roadmap',
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-    atribucion: '&copy; OpenStreetMap &copy; CARTO',
-    maxZoom: 20
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+    atribucion: '&copy; Esri, HERE, Garmin, FAO, NOAA, USGS, &copy; OpenStreetMap',
+    maxZoom: 19
   },
   calles: {
     nombre: 'Calles',
